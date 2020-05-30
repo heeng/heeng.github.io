@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>华为成渝地区实习生面经</title>
+    <url>/2020/05/28/2020%E5%8D%8E%E4%B8%BA%E5%AE%9E%E4%B9%A0%E9%9D%A2%E7%BB%8F/</url>
+    <content><![CDATA[<p>华为成渝地区实习生面经<br>（实习面试分为两轮，第一轮为技术面，第二面为主管面，技术面险过，主管面挂）<br>技术面记录（自己概念比较薄弱的地方）：<br>1、spring底层原理 AOP和IOC，一定要分析底层原理<br>2、JDK1.8 新特性 除了lambda还有<br>3、String底层源码<br>看了String源码，简单理解：<br>结论就是 String底层是一个不可变字符串，使用连接符的时候，实际上是经过了StringBuilder的优化处理的。并不是在原来的String对象中做追加。<br>以下是关于String比较全面的解释：<br>链接: <a href="https://www.cnblogs.com/scywkl/p/12489672.html](https://www.cnblogs.com/scywkl/p/12489672.html)" target="_blank" rel="noopener">https://www.cnblogs.com/scywkl/p/12489672.html](https://www.cnblogs.com/scywkl/p/12489672.html)</a>.<br>4、设计模式一定要搞懂，分别是怎么用的？<br>5、代码量是多少<br>6、equals和hashcode的重写<br>7、分布式原理：Dubbo是基于rpc的，springcloud是基于http<br>主管面记录：<br>主管面中主要问了研究生在校期间做的项目，可能表达不够清楚，而且疫情期间主要是在为工作做准备，所以对项目也有些疏忽，所以没过，要提高自己的表达能力，而且现在返校了，也要好好科研，两手抓哦。</p>
+]]></content>
+      <categories>
+        <category>面经</category>
+      </categories>
+      <tags>
+        <tag>实习面经</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Mysql引起的CPU消耗过大，如何优化？</title>
+    <url>/2020/05/28/%E5%A6%82%E6%9E%9C%E6%98%AFMysql%E5%BC%95%E8%B5%B7%E7%9A%84CPU%E6%B6%88%E8%80%97%E8%BF%87%E5%A4%A7%EF%BC%8C%E5%A6%82%E4%BD%95%E4%BC%98%E5%8C%96%EF%BC%9F/</url>
+    <content><![CDATA[<p>一般是谁在消耗CPU？<br>用户+系统+IO等待+软硬中断+空闲<br>其中系统和软硬中断这两部分是比较难被改变的</p>
+<ul>
+<li>用户</li>
+</ul>
+<p>用户空间CPU消耗，各种逻辑运算<br>（正在进行大量tps，函数/排序/类型转换/逻辑IO访问……）</p>
+<ul>
+<li><p>IO等待</p>
+<p> 等待IO请求的完成<br>（此时CPU实际上很空闲）</p>
+</li>
+</ul>
+<p><img src="https://img-blog.csdnimg.cn/20200417154505266.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl8zODc2NDgxNg==,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"></p>
+<p><img src="https://img-blog.csdnimg.cn/20200417154429378.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl8zODc2NDgxNg==,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"></p>
+<ul>
+<li>用户和IO等待消耗了大部分cpu</li>
+</ul>
+<ol>
+<li>吞吐量下降    </li>
+<li>查询响应时间增加    </li>
+<li>慢查询数增加    </li>
+<li>对mysql的并发陡增，也会产生上诉影响</li>
+</ol>
+<h2 id="如何减少CPU消耗？"><a href="#如何减少CPU消耗？" class="headerlink" title="如何减少CPU消耗？"></a><strong>如何减少CPU消耗？</strong></h2><p><strong>减少等待</strong></p>
+<ul>
+<li><p>减少IO量：</p>
+<p> SQL/index，使用合适的索引减少扫描的行数（空间换时间）</p>
+</li>
+<li><p>提升IO处理能力：</p>
+<p> 加cache/加磁盘</p>
+</li>
+</ul>
+<p><strong>减少计算</strong></p>
+<ul>
+<li><p>减少逻辑运算量</p>
+<pre><code>避免使用函数
+减少排序：利用索引取得有序数据或避免不必要的排序，如union all代替union，order by索引字段等
+禁止类型转换：使用合适类型并保证传入参数类型与数据库字段类型绝对一致
+简单类型：尽量避免复杂类型，降低由于复杂类型带来的附加运算。更小的数据类型占用更少的磁盘、内存、cpu缓存和cpu周期</code></pre></li>
+<li><p>减小逻辑IO量<br> index：优化索引，减小不必要的表扫描，调整组合索引字段顺序，去除选择性很差的索引字段等<br> table：合理拆分，适度冗余，如将很少使用的大字段拆分到独立表，非常频繁的小字段冗余到引用表<br> SQL：调整SQL语法，充分利用现有索引，避免不必要的扫描，排序及其他操作。如减少复杂join，减少order by，尽量union all，避免子查询<br> 数据类型：够用就好</p>
+</li>
+<li><p>减小query请求量</p>
+<pre><code>适当缓存：降低缓存数据粒度，对静态并被频繁请求的数据进行适当的缓存，如用户信息，商品信息等
+优化实现：尽量去除不必要的重复请求 如禁止同一页面多次重复请求相同数据的问题，通过跨页面参数传递减少访问等
+合理需求：评估需求产出比，对产出比极端低下的需求合理去除</code></pre></li>
+</ul>
+]]></content>
+      <categories>
+        <category>java基础知识</category>
+      </categories>
+      <tags>
+        <tag>Java基础</tag>
+        <tag>MySQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>富途科技实习生面经</title>
+    <url>/2020/05/28/%E5%AF%8C%E9%80%94%E5%AE%9E%E4%B9%A0%E9%9D%A2%E8%AF%95%EF%BC%88%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%BC%80%E5%8F%91%EF%BC%89/</url>
+    <content><![CDATA[<p>富途是近期实习面试中，面试体验最好的了！而且也顺利拿到了offer，IOS客户端开发。但是由于疫情原因，无法实习，已拒。<br>一共三面：<br>技术一面：<br>（面试官主要用C++面试，但是底层原理相差不大）<br>主要考了内存变量、内存区域、数组和链表等数据结构</p>
+<p><img src="https://img-blog.csdnimg.cn/20200525153411517.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl8zODc2NDgxNg==,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"></p>
+<p><img src="https://img-blog.csdnimg.cn/20200525153437778.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl8zODc2NDgxNg==,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>以下多线程对int型变量x的操作，哪几个不需要进行同步( )<br>    A. x=y;    B. x++;    C. ++x;    D. x = 1;</p>
+<p>一个整型数组，找出其中两个数之和是一个给定值的所有组合。（编程题）<br><img src="https://img-blog.csdnimg.cn/20200525153511128.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl8zODc2NDgxNg==,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"><br>技术二面：<br>主要问了关于JAVA语句的使用，这次面试就比较深入，有些问题一时没有想起来，面试官也会对思路进行引导。<br>考察比较多的是计算机基础知识，这部分的知识很薄弱。<br>面试官问到 单波、双波、广波没有答出来；<br>还有一个印象比较深的题是：Java1.8之后的HashMap为什么是n&gt;8之后？<br>看了源码也没有给出明确的解释，这是源码中的解释：<br>理想情况下，在随机哈希码下，哈希表中节点的频率遵循泊松分布，而根据统计，忽略方差，列表长度为K的期望出现的次数是以上的结果，可以看到其实在为8的时候概率就已经很小了，再往后调整并没有很大意义。</p>
+<p>我自己的理解：<br>红黑树的平均查找长度是log(n)，如果长度为8，平均查找长度为log(8)=3，链表的平均查找长度为n/2，当长度为8时，平均查找长度为8/2=4，这才有转换成树的必要；链表长度如果是小于等于6，6/2=3，而log(6)=2.6，虽然速度也很快的，但是转化为树结构和生成树的时间并不会太短。</p>
+<p>手撕算法：<br>二叉树的最大路径和</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">该题的题意比较难以理解，很容易跑题而导致解答错误。</span><br><span class="line">该题说明的是，能够找到1个节点到另外一个节点的最大路径和，因此思路如下</span><br><span class="line">定义一个递归方法，该方法的功能是：得到当前树的最大的路径和，而计算当前的最大路径和是通过递归计算左右子树的最大路径好得到的。最终当前树的最大路径和为Math.max(current.val, Math.max(左子树最大路径和，右子树最大路径和));</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Definition for a binary tree node.</span><br><span class="line"> * public class TreeNode &#123;</span><br><span class="line"> *     int val;</span><br><span class="line"> *     TreeNode left;</span><br><span class="line"> *     TreeNode right;</span><br><span class="line"> *     TreeNode(int x) &#123; val &#x3D; x; &#125;</span><br><span class="line"> * &#125;</span><br><span class="line"> *&#x2F;</span><br><span class="line">class Solution &#123;</span><br><span class="line">    private int max &#x3D; Integer.MIN_VALUE;</span><br><span class="line">    public int maxPathSum(TreeNode root) &#123;</span><br><span class="line">        &#x2F;&#x2F;通过后序遍历的方式，先计算出左右子树的最大路径和，然后再计算当前树的最大路径和</span><br><span class="line">        maxSum(root);</span><br><span class="line">        return max;</span><br><span class="line">    &#125;</span><br><span class="line">     private int maxSum(TreeNode root) &#123;</span><br><span class="line">        &#x2F;&#x2F;通过后序遍历的方式，先计算出左右子树的最大路径和，然后再计算当前树的最大路径和</span><br><span class="line">        if(null &#x3D;&#x3D; root) &#123;</span><br><span class="line">            return 0;</span><br><span class="line">        &#125;</span><br><span class="line">        int leftMax &#x3D; Math.max(maxSum(root.left), 0);</span><br><span class="line">        int rightMax &#x3D; Math.max(maxSum(root.right), 0);</span><br><span class="line">        max &#x3D; Math.max(max, leftMax + rightMax + root.val);</span><br><span class="line">        return root.val + Math.max(leftMax, rightMax);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<p>HR面：<br>HR面给人的感觉也是，很舒服，主要是问一下简单得情况和对性格仿麦呢进行了解。过！</p>
+]]></content>
+      <categories>
+        <category>面经</category>
+      </categories>
+      <tags>
+        <tag>实习面经</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>面向过程性能比面向对象高？</title>
+    <url>/2020/05/28/%E9%9D%A2%E5%90%91%E8%BF%87%E7%A8%8B%20%EF%BC%9A%E9%9D%A2%E5%90%91%E8%BF%87%E7%A8%8B%E6%80%A7%E8%83%BD%E6%AF%94%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A1%E9%AB%98%EF%BC%9F/</url>
+    <content><![CDATA[<p>面向过程 ：面向过程性能比面向对象高。 因为类调用时需要实例化，开销比较大，比较消耗资源，所以当性能是最重要的考量因素的时候，比如单片机、嵌入式开发、Linux/Unix等一般采用面向过程开发。</p>
+<p>这个并不是根本原因，面向过程也需要分配内存，计算内存偏移量，Java性能差的主要原因并不是因为它是面向对象语言，而是Java是半编译语言，最终的执行代码并不是可以直接被CPU执行的二进制机械码。<br>而面向过程语言大多都是直接编译成机械码在电脑上执行，并且其它一些面向过程的脚本语言性能也并不一定比Java好。</p>
+]]></content>
+      <categories>
+        <category>java基础知识</category>
+      </categories>
+      <tags>
+        <tag>Java基础</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/2020/05/28/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>阿里实习生面经</title>
+    <url>/2020/05/28/%E9%98%BF%E9%87%8C%E4%BA%94%E8%BD%AE%E9%9D%A2%E8%AF%95%E9%9D%A2%E7%BB%8F/</url>
+    <content><![CDATA[<h2 id="HashMap-Java7-8源码详解"><a href="#HashMap-Java7-8源码详解" class="headerlink" title="HashMap Java7/8源码详解"></a>HashMap Java7/8源码详解</h2><p><strong>1、HashMap与哈希表</strong><br>数据结构：哈希桶，底层是数组，查找速度很快o(1)<br>哈希表的软肋：数据的碰撞，解决碰撞，就是用链表<br>哈希表的核心是基于哈希值的桶和链表<br>O(1)的平均查找、插入、删除时间<br>致命缺陷是哈希值的碰撞<br><strong>2、Java7 HashMap</strong><br>经典的Hash表实现：数组+链表<br>重要知识点：<br>初始容量：16,2的幂次方<br>负载因子：0.75<br>哈希算法<br>扩容<br> 低效<br> 线程不安全</p>
+<p><strong>3、为什么一定要是2的幂次方</strong><br>hash&amp;(length-1)<br>只有在长度为2的幂次方时，对他进行减一操作时才能拿到全是1的值，然后用位运算的方式快速的拿到数组的下标，并且他的分布还是均匀的</p>
+<p><strong>4、Java7的HashMap容易遇到的问题</strong><br>死锁<br>环形链表<br>链接: <a href="https://coolshell.cn/articles/9606.html/" target="_blank" rel="noopener">link</a>.</p>
+<p>可以通过精心构造的恶意请求引发Dos<br>链表性能退化分析</p>
+<p><strong>5、Java8 HashMap的改进</strong><br>数组+链表/红黑树<br>扩容时插入顺序的改进<br>函数方法<br>    forEach<br>    compute系列<br>Map的新API<br>    merge<br>    replace</p>
+<h2 id="阿里五轮面试面经"><a href="#阿里五轮面试面经" class="headerlink" title="阿里五轮面试面经"></a>阿里五轮面试面经</h2><p><strong>1、Synchronized和lock锁的区别；看过synchronized源码吗？</strong></p>
+<p>synchronized底层语义原理<br>Java 虚拟机中的同步(Synchronization)基于进入和退出管程(Monitor)对象实现， 无论是显式同步(有明确的 monitorenter 和 monitorexit 指令,即同步代码块)还是隐式同步都是如此。在 Java 语言中，同步用的最多的地方可能是被 synchronized 修饰的同步方法。同步方法 并不是由 monitorenter 和 monitorexit 指令来实现同步的，而是由方法调用指令读取运行时常量池中方法的 ACC_SYNCHRONIZED 标志来隐式实现的，关于这点，稍后详细分析。下面先来了解一个概念Java对象头，这对深入理解synchronized实现原理非常关键。<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/javazejian/article/details/72828483</a>.</p>
+<p><strong>2、JVM自动内存管理，Minor GC与Full GC的触发机制</strong><br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/ysl19910806/article/details/99776387</a>.</p>
+<p><strong>3、了解过JVM调优没，基本思路是什么</strong><br>如果CPU使用率较高，GC频繁且GC时间长，可能就需要JVM调优了。<br>基本思路就是让每一次GC都回收尽可能多的对象，<br>对于CMS来说，要合理设置年轻代和年老代的大小。该如何确定它们的大小呢？这是一个迭代的过程，可以先采用JVM的默认值，然后通过压测分析GC日志。</p>
+<p>如果看年轻代的内存使用率处在高位，导致频繁的Minor GC，而频繁GC的效率又不高，说明对象没那么快能被回收，这时年轻代可以适当调大一点。</p>
+<p>如果看年老代的内存使用率处在高位，导致频繁的Full GC，这样分两种情况：如果每次Full GC后年老代的内存占用率没有下来，可以怀疑是内存泄漏；如果Full GC后年老代的内存占用率下来了，说明不是内存泄漏，要考虑调大年老代。</p>
+<p>对于G1收集器来说，可以适当调大Java堆，因为G1收集器采用了局部区域收集策略，单次垃圾收集的时间可控，可以管理较大的Java堆。</p>
+<p><strong>4、如何设计存储海量数据的存储系统</strong></p>
+<p>海量数据的解决方案：<br>页面上：<br>使用缓存；页面静态化技术；<br>数据库层面：<br>分离数据库中活跃的数据；批量读取和延迟修改；读写分离；使用NoSQL和Hadoop等技术；分布式部署数据库；应用服务和数据服务分离；<br>其他方面：<br>使用搜索引擎搜索数据库中的数据；进行业务的拆分；<br>高并发情况下的解决方案：<br>应用程序和静态资源文件进行分离，静态资源可以使用CDN；<br>集群与分布式；<br>使用Nginx反向代理；</p>
+<p><strong>5、缓存的实现原理，设计缓存要注意什么</strong><br>将热点数据放在内存中，用户查询时命中内存中的数据而不用到数据库中查询<br>注意缓存的一致性，缓存雪崩、击穿、穿透的问题</p>
+<p><strong>6、volatile关键字的如何保证内存可见性</strong><br>volatile修饰的变量保证其每个写操作后都更新到主内存，每个读操作都到主内存中更新，具体的话是在JVM层面，在修饰的变量前后加关键字<br>顺带一提volatile还能防止指令重排，这两者的实现方式都是内存屏障。</p>
+<p>happen-before原则<br>如果前一个操作的执行结果必须对后一个操作可见，那就不允许这两个操作进行重排序，且happen-befor具有传递性</p>
+<p><strong>7、你说你熟悉并发编程，那么你说说Java锁有哪些种类，以及区别</strong>（果然深度不一样）<br>公平锁/非公平锁<br>这个是在ReentrankLock中实现的，synchronized没有，是用一个队列实现的，在公平锁好理解，就是先进这个队列的，也先出队列获得资源，而非公平锁的话，则是还没有进队列之前可以与队列中的线程竞争尝试获得锁，如果获取失败，则进队列，此时也是要乖乖等前面出队才行<br>可重入锁<br>如果一个线程获得过该锁，可以再次获得，主要是用途就是在递归方面，还有就是防止死锁，比如在一个同步方法块中调用了另一个相同锁对象的同步方法块<br>独享锁/共享锁<br>共享锁可以由多个线程获取使用，而独享锁只能由一个线程获取。<br>对ReentrantReadWriteLock其读锁是共享锁，其写锁是独占锁<br>读锁的共享锁可保证并发读是非常高效的，读写，写读，写写的过程是互斥的。其中获得写锁的线程还能同时获得读锁，然后通过释放写锁来降级。读锁则不能升级<br>互斥锁/读写锁<br>上面讲的独享锁/共享锁就是一种广义的说法，互斥锁/读写锁就是具体的实现。<br>互斥锁在Java中的具体实现就是ReentrantLock<br>读写锁在Java中的具体实现就是ReadWriteLock<br>乐观锁/悲观锁<br>乐观锁就是乐观的认为不会发生冲突，用cas和版本号实现<br>悲观锁就是认为一定会发生冲突，对操作上锁<br>分段锁<br>在1.7的concurrenthashmap中有分段锁的实现，具体为默认16个的segement数组，其中segement继承自reentranklock，每个线程过来获取一个锁，然后操作这个锁下连着的map。<br>偏向锁/轻量级锁/重量级锁<br>在jdk1.6中做了第synchronized的优化，<br>偏向锁指的是当前只有这个线程获得，没有发生争抢，此时将方法头的markword设置成0，然后每次过来都cas一下就好，不用重复的获取锁<br>轻量级锁：在偏向锁的基础上，有线程来争抢，此时膨胀为轻量级锁，多个线程获取锁时用cas自旋获取，而不是阻塞状态<br>重量级锁：轻量级锁自旋一定次数后，膨胀为重量级锁，其他线程阻塞，当获取锁线程释放锁后唤醒其他线程。（线程阻塞和唤醒比上下文切换的时间影响大的多，涉及到用户态和内核态的切换）<br>自旋锁：在没有获取锁的时候，不挂起而是不断轮询锁的状态</p>
+<p><strong>8、Http请求的过程与原理</strong></p>
+<p><strong>9、对Java中的对象、实例、句柄、直接指针的理解</strong><br>虚拟机在创建对象的时候，会优先查询常量池中是否有该对象的实例，如果没有则需要加载、解析、初始化class，然后分配内存，初始化内存，设置对象（HASH CODE 、 GC年代等），最后执行init才算是创建完对象。<br>        对象即实例。<br>        String str；<br>        以上的str就是一个句柄，但是并没有指向任何对象，好比这是一个客服中心，告诉你打400号码联系客服中心，但是没有指明是哪个客服人员，如果String str = “9527”;这个时候就是说明了编号9527为您服务，可以通过句柄访问对象。<br>直接指针，我理解的：<br>        class Test{<br>            public void doSth();<br>        }<br>        new Test().doSth();//直接指针<br>        Test() test = new Test();//句柄引用<br>        test.doSth();<br>        当然直接指针肯定是速度更快的，但是如果用句柄，对象被移动（比如GC），只需要改变指针而不会改变引用；如果是直接指针的方式，速度那是杠杠的，不用多余的一次指针的定位。综上，写JVM多用直接指针，写应用更多的是句柄。</p>
+<p><strong>10、什么是SQL注入？如何防范sql注入？</strong><br>防治SQL注入式攻击可以采用两种方法，一是加强对用户输入内容的检查与验证;二是强迫使用参数化语句来传递用户输入的内容。<br>SQL注入并不是一个在SQL内不可解决的问题，这种攻击方式的存在也不能完全归咎于SQL这种语言，因为注入的问题而放弃SQL这种方式也是因噎废食。首先先说一个我在其他回答中也曾提到过的观点：没有（运行时）编译，就没有注入。<br>SQL注入产生的原因，和栈溢出、XSS等很多其他的攻击方法类似，就是未经检查或者未经充分检查的用户输入数据，意外变成了代码被执行。针对于SQL注入，则是用户提交的数据，被数据库系统编译而产生了开发者预期之外的动作。也就是，SQL注入是用户输入的数据，在拼接SQL语句的过程中，超越了数据本身，成为了SQL语句查询逻辑的一部分，然后这样被拼接出来的SQL语句被数据库执行，产生了开发者预期之外的动作。所以从根本上防止上述类型攻击的手段，还是避免数据变成代码被执行，时刻分清代码和数据的界限。而具体到SQL注入来说，被执行的恶意代码是通过数据库的SQL解释引擎编译得到的，所以只要避免用户输入的数据被数据库系统编译就可以了。现在的数据库系统都提供SQL语句的预编译（prepare）和查询参数绑定功能，在SQL语句中放置占位符’?’，然后将带有占位符的SQL语句传给数据库编译，执行的时候才将用户输入的数据作为执行的参数传给用户。这样的操作不仅使得SQL语句在书写的时候不再需要拼接，看起来也更直接，而且用户输入的数据也没有机会被送到数据库的SQL解释器被编译执行，也不会越权变成代码。至于为什么这种参数化的查询方式没有作为默认的使用方式，我想除了兼容老系统以外，直接使用SQL确实方便并且也有确定的使用场合。多说一点，从代码的角度来看，拼接SQL语句的做法也是不恰当的。<br>SQL注入#和$区别与总结：</p>
+<p>1.#{}  将传入的数据都当成一个字符串，会对自动传入的数据加一个双引号。<br>如：order by #user_id#，如果传入的值是111,那么解析成sql时的值为order by “111”,<br>如果传入的值是id，则解析成的sql为order by “id”.<br>2.$将传入的数据直接显示生成在sql中。如：order by $user_id$，如果传入的值是111,那么解析成sql时的值为order by user_id,<br>如果传入的值是id，则解析成的sql为order by id.<br>3.#{}方式能够很大程度防止sql注入。<br>4.$方式无法防止Sql注入。<br>5.$方式一般用于传入数据库对象，例如传入表名.<br>6.一般能用#的就别用$.</p>
+<p>MyBatis排序时使用order by 动态参数时需要注意，用$而不是#</p>
+<p>Nosql数据库：<br>现在主流常用的数据库应该是redis和mongodb；<br>Redis<br>Redis 是一个开源的使用ANSI C语言编写、支持网络、可基于内存亦可持久化的日志型、Key-Value数据库，并提供多种语言的API。目前由VMware主持开发工作。</p>
+<ol>
+<li>特点</li>
+<li>1 数据格式<br>Redis 通常被称为数据结构服务器，因为值（value）可以是 字符串(String), 哈希(Hash/Map), 列表(list), 集合(sets) 和 有序集合(sorted sets)五种类型，操作非常方便。比如，如果你在做好友系统，查看自己的好友关系，如果采用其他的key-value系统，则必须把对应的好友拼接成字符串，然后在提取好友时，再把value进行解析，而redis则相对简单，直接支持list的存储(采用双向链表或者压缩链表的存储方式)。<br>我们来看下这五种数据类型。<br>⑴ String<br>string 是 Redis 最基本的类型，你可以理解成与 Memcached 一模一样的类型，一个key对应一个value。<br>string 类型是二进制安全的。意思是 Redis 的 string 可以包含任何数据。比如 jpg 图片或者序列化的对象 。<br>string 类型是 Redis 最基本的数据类型，一个键最大能存储512MB。<br>⑵ Hash<br>Redis hash 是一个键值对集合。<br>Redis hash 是一个 string 类型的 field 和 value 的映射表，hash 特别适合用于存储对象。<br>⑶ List<br>Redis 列表是简单的字符串列表，按照插入顺序排序。你可以添加一个元素导列表的头部（左边）或者尾部（右边）。<br>⑷ Sets<br>Redis的Set是string类型的无序集合。 集合是通过哈希表实现的，所以添加，删除，查找的复杂度都是O(1)。<br>添加一个string元素到 key 对应的 set 集合中，成功返回1，如果元素已经在集合中返回0，key对应的set不存在返回错误<br>⑸ sorted sets/zset<br>Redis zset 和 set 一样也是string类型元素的集合,且不允许重复的成员。 不同的是每个元素都会关联一个double类型的分数。redis正是通过分数来为集合中的成员进行从小到大的排序。<br>zset的成员是唯一的,但分数(score)却可以重复。可以通过 zadd 命令（格式如下） 添加元素到集合，若元素在集合中存在则更新对应score。</li>
+<li>优缺点<br>优势</li>
+<li>非常丰富的数据结构；</li>
+<li>Redis提供了事务的功能，可以保证一串 命令的原子性，中间不会被任何操作打断；</li>
+<li>数据存在内存中，读写非常的高速，可以达到10w/s的频率。<br>缺点</li>
+<li>Redis3.0后才出来官方的集群方案，但仍存在一些架构上的问题（出处）；</li>
+<li>持久化功能体验不佳——通过快照方法实现的话，需要每隔一段时间将整个数据库的数据写到磁盘上，代价非常高；而aof方法只追踪变化的数据，类似于mysql的binlog方法，但追加log可能过大，同时所有操作均要重新执行一遍，恢复速度慢；</li>
+<li>由于是内存数据库，所以，单台机器，存储的数据量，跟机器本身的内存大小。虽然redis本身有key过期策略，但是还是需要提前预估和节约内存。如果内存增长过快，需要定期删除数据。<br>适用场景<br>适用于数据变化快且数据库大小可遇见（适合内存容量）的应用程序</li>
+</ol>
+<p>关系型数据库和非关系型数据库：<br>1.关系型数据库通过外键关联来建立表与表之间的关系，<br>2.非关系型数据库通常指数据以对象的形式存储在数据库中，而对象之间的关系通过每个对象自身的属性来决定。<br>3.非关系型数据库中，我们查询一条数据，结果出来一个数组，关系型数据库中，查询一条数据结果是一个对象。</p>
+<p><strong>11、联合索引是什么</strong><br>对多个字段同时建立的索引(有顺序，ABC，ACB是完全不同的两种联合索引。)<br>为什么要用<br>以联合索引(a,b,c)为例</p>
+<p>建立这样的索引相当于建立了索引a、ab、abc三个索引。一个索引顶三个索引当然是好事，毕竟每多一个索引，都会增加写操作的开销和磁盘空间的开销。<br>覆盖(动词)索引。同样的有联合索引（a,b,c），如果有如下的sql: select a,b,c from table where a=xxx and b = xxx。那么MySQL可以直接通过遍历索引取得数据，而无需读表，这减少了很多的随机io操作。减少io操作，特别的随机io其实是dba主要的优化策略。所以，在真正的实际应用中，覆盖索引是主要的提升性能的优化手段之一<br>索引列越多，通过索引筛选出的数据越少。有1000W条数据的表，有如下sql:select * from table where a = 1 and b =2 and c = 3,假设每个条件可以筛选出10%的数据，如果只有单值索引，那么通过该索引能筛选出1000W<em>10%=100w 条数据，然后再回表从100w条数据中找到符合b=2 and c= 3的数据，然后再排序，再分页；如果是复合索引，通过索引筛选出1000w <em>10% *10% *10%=1w，然后再排序、分页，哪个更高效，一眼便知<br>使用时注意什么<br>单个索引需要注意的事项，组合索引全部通用。比如索引列不要参与计算啊、or的两侧要么都索引列，要么都不是索引列啊、模糊匹配的时候%不要在头部啦等等<br>最左匹配原则。(A,B,C) 这样3列，mysql会首先匹配A，然后再B，C.<br>如果用(B,C)这样的数据来检索的话，就会找不到A使得索引失效。如果使用(A,C)这样的数据来检索的话，就会先找到所有A的值然后匹配C，此时联合索引是失效的。<br>把最常用的，筛选数据最多的字段放在左侧<br>多个单列索引在多条件查询时优化器会选择最优索引策略，可能只用一个索引，也可能将多个索引全用上！ 但多个单列索引底层会建立多个B+索引树，比较占用空间，也会浪费一定搜索效率，故如果只有多条件联合查询时最好建联合索引！<br>联合索引本质：<br>当创建</em></em>(a,b,c)联合索引时，相当于创建了(a)单列索引<strong>，(a,b)联合索引以及</strong>(a,b,c)联合索引**<br>想要索引生效的话,只能使用 a和a,b和a,b,c三种组合；当然，我们上面测试过，a,c组合也可以，但实际上只用到了a的索引，c并没有用到！<br>注：这个可以结合上边的 通俗理解 来思考！</p>
+<p>MyISAM和InnoDB索引：<br>MyISAM索引文件和数据文件是分离的，索引文件仅保存数据记录的地址。而在InnoDB中，表数据文件本身就是按B+Tree组织的一个索引结构，这棵树的叶节点data域保存了完整的数据记录。这个索引的key是数据表的主键，因此InnoDB表数据文件本身就是主索引。<br> InnoDB索引和MyISAM索引的区别：<br>一是主索引的区别，InnoDB的数据文件本身就是索引文件。而MyISAM的索引和数据是分开的。<br>二是辅助索引的区别：InnoDB的辅助索引data域存储相应记录主键的值而不是地址。而MyISAM的辅助索引和主索引没有多大区别</p>
+<p>MYSQL索引：<br>聚集索引和非聚集索引<br>Mysql索引类型：唯一索引、聚集索引、非聚集索引、全文索引<br>聚集索引：数据行的物理顺序和列值得逻辑顺序相同，一个表中只能拥有一个聚集索引。索引的叶子节点就是对应的数据节点，可以直接获取到对应的全部列的数据，而非聚集索引在索引没有覆盖到对应的列的时候需要进行二次查询。查询方面，聚集索引的速度往往更占优势。<br>非聚集索引：<br>该索引中索引的逻辑顺序与磁盘上行的物理存储顺序不同，一个表中可以拥有多个非聚集索引。非聚集索引叶节点仍然是索引节点，只是有一个指针指向对应的数据块。<br>解决非聚集索引的二次查询问题：复合索引。需要按组最左侧索引的原则</p>
+<p>磁盘IO操作包括三个参数：平均寻址时间、盘片旋转速度以及最大传输速度<br>最耗时的是寻找扇区的时候。</p>
+<p><strong>12、网络协议层相关</strong><br>计算机网络分层：（TCP/IP分层）<br>OSI七层：<br>应用层、表示层、会话层、传输层、网络层、数据链路层、物理层</p>
+<p>TCP/IP四层：<br>应用层、传输层、网络层、数据链路层<br><img src="https://img-blog.csdnimg.cn/20200415105525685.png" alt="在这里插入图片描述"><br>TCP和UDP属于传输层：<br>UDP：无连接，不可靠，可能出现丢包，顺序会乱，数据报模式，面对报文，不会占用太多系统资源。UDP首部结构简单，开销8个字节<br>UDP要实现可靠性，模拟TCP，但是无法在传输层保证数据的可靠传输，需要通过应用层来实现和控制。不考虑拥塞处理，可靠UDP设计：<br>1、    添加seq/ack机制，确保数据发送到对端<br>2、    添加发送和接受缓冲区，主要是用户超时重传<br>3、    添加超时重传机制<br>也有开源程序利用UDP实现了可靠的数据传输。分别为RUDP、RTP、UDT<br>TCP如何实现可靠性传输：<br>确认机制、重传机制、滑动窗口</p>
+<p>TCP：面向连接的，可靠，编号，流量控制和拥塞控制，避免丢包，超时，重传，流模式，面对字节，会对字节信息进行处理，占用资源多。TCP首部复杂，开销至少25个字节。</p>
+<p>TCP三次握手和四次挥手：<br>三次握手：<br>客户端像服务端发送SYN  seq<br>SYN:同步   seq：序列号<br>服务端像客户端回消息  seq  ACK（ACK=SYN+1）确保是这次连接<br>客户端设置seq   ACK<br>假如是两次握手，如果出现了客户端项服务的发送连接，但是因为网络延迟的原因没有连接成功，于是第二次发生连接，成功连接，然后第一次的连接服务端收到了，建立连接，这个连接在服务端就会一直等待客户端的数据交互，但是客户端以为这次连接失败了，让服务端浪费很多资源<br>四次挥手：<br>客户端向服务端发送FIN+ACK<br>服务端收到后发送ACK<br>服务端继续发送ACK确认（两次发送之间传递服务器未传输完成的数据）<br>客户端收到后发送ACK，之后饿虎的进入TIME-WAIT状态，两个MSL时间后无响应则连接关闭。MSL:最大分节生命期<br>如果三次挥手，那么不能确定数据传输完成就关闭连接了。</p>
+<p>DNS域名解析：<br>首先在本地DNS服务器中找是否有缓存，没有的话就找  根DNS服务器—顶级域DNS服务器—权威DNS服务器—查询到IP地址，回送到浏览器（递归查询和迭代查询）<br>浏览器获得IP地址之后，发起三次握手<br>TCP/IP建立连接之后，浏览器就可以向服务器发送请求了<br>服务器接受到请求之后，根据路径参数，经过处理，生成HTML页面代码返回给浏览器；<br>浏览器拿到代码之后，进行解析和渲染。</p>
+<p>DNS在区域传输的时候使用TCP协议，其他时候使用UDP协议。<br>DNS区域传输的时候使用TCP协议：<br>1.辅域名服务器会定时（一般3小时）向主域名服务器进行查询以便了解数据是否有变动。如有变动，会执行一次区域传送，进行数据同步。区域传送使用TCP而不是UDP，因为数据同步传送的数据量比一个请求应答的数据量要多得多。<br>2.TCP是一种可靠连接，保证了数据的准确性。<br>域名解析时使用UDP协议：<br>客户端向DNS服务器查询域名，一般返回的内容都不超过512字节，用UDP传输即可。不用经过三次握手，这样DNS服务器负载更低，响应更快。理论上说，客户端也可以指定向DNS服务器查询时用TCP，但事实上，很多DNS服务器进行配置的时候，仅支持UDP查询包</p>
+<p><strong>13、携程面经：</strong><br>1、    链表的定义<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/m0_37631322/article/details/81777855</a>.</p>
+<p>扩展：约瑟环的实现，用队列实现<br>2、    实现链表翻转<br>3、    怎么判断链表是否有环<br>4、    二叉平衡树如何用一维数组存储<br>5、    JVM分区<br>五大分区：<br>线程私有：<br>        程序计数器、虚拟机栈、本地方法栈<br>线程共有：<br>    堆、方法区<br>6、JVM GC<br>7、求数组的最大子序列和<br>8、final关键字4种方法<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://www.cnblogs.com/jiejunwang/p/10285979.html</a>.</p>
+<p>9、继承、封装和多态<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://www.cnblogs.com/yinbiao/p/8067273.html</a>.</p>
+<p>10、sleep用法<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/xzj80927/article/details/84590610</a>.</p>
+<p>11、线程池<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://www.jianshu.com/p/210eab345423</a>.</p>
+<p>12、spring ioc aop 概述和优点<br>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/dkbnull/article/details/87219562</a>.</p>
+<p><a href="https://www.job592.com/pay/comms11116.html" target="_blank" rel="noopener">https://www.job592.com/pay/comms11116.html</a><br><a href="http://www.mybbchina.net/jingli/148728.html" target="_blank" rel="noopener">http://www.mybbchina.net/jingli/148728.html</a></p>
+<p><strong>14.服务器如何记录用户的状态（cookie和session）</strong></p>
+<p><strong>15、负载均衡</strong></p>
+<p>链接: <a href="https://www.csdn.net/" target="_blank" rel="noopener">https://blog.csdn.net/bpb_cx/article/details/82771168</a>.</p>
+<p><strong>16、面向对象和面向过程</strong></p>
+<p>面向过程：</p>
+<p>　　　　优点：性能比面向对象高，因为类调用时需要实例化，开销比较大，比较消耗资源;比如单片机、嵌入式开发、 Linux/Unix等一般采用面向过程开发，性能是最重要的因素。<br>　　　　缺点：没有面向对象易维护、易复用、易扩展<br>面向对象：</p>
+<p>　　　　优点：易维护、易复用、易扩展，由于面向对象有封装、继承、多态性的特性，可以设计出低耦合的系统，使系统 更加灵活、更加易于维护<br>　　　　缺点：性能比面向过程低<br>　　　　<br><strong>17、如果硬件和带宽不变，如何提高TCP传输速度</strong><br>用UDP实现，然后自己实现可靠性</p>
+<p><strong>18、一、fork入门知识</strong></p>
+<pre><code>一个进程，包括代码、数据和分配给进程的资源。fork（）函数通过系统调用创建一个与原来进程几乎完全相同的进程，也就是两个进程可以做完全相同的事，但如果初始参数或者传入的变量不同，两个进程也可以做不同的事。</code></pre><p>一个进程调用fork（）函数后，系统先给新的进程分配资源，例如存储数据和代码的空间。然后把原来的进程的所有值都复制到新的新进程中，只有少数值与原来的进程的值不同。相当于克隆了一个自己。<br>为什么两个进程的fpid不同呢，这与fork函数的特性有关。fork调用的一个奇妙之处就是它仅仅被调用一次，却能够返回两次，它可能有三种不同的返回值：<br>    1）在父进程中，fork返回新创建子进程的进程ID；<br>    2）在子进程中，fork返回0；<br>    3）如果出现错误，fork返回一个负值；</p>
+<pre><code>在fork函数执行完毕后，如果创建新进程成功，则出现两个进程，一个是子进程，一个是父进程。在子进程中，fork函数返回0，在父进程中，fork返回新创建子进程的进程ID。我们可以通过fork返回的值来判断当前进程是子进程还是父进程。</code></pre>]]></content>
+      <categories>
+        <category>面经</category>
+      </categories>
+      <tags>
+        <tag>实习面经</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>超详细十大经典算法</title>
+    <url>/2020/05/29/%E8%B6%85%E8%AF%A6%E7%BB%86%E5%8D%81%E5%A4%A7%E7%BB%8F%E5%85%B8%E6%8E%92%E5%BA%8F%E6%96%B9%E6%B3%95/</url>
+    <content><![CDATA[<p>0、排序算法说明</p>
+<p>0.1 排序的定义</p>
+<pre><code>对一序列对象根据某个关键字进行排序。
+
+0.2</code></pre><p>术语说明</p>
+<pre><code>稳定</code></pre><p>：如果a原本在b前面，而a=b，排序之后a仍然在b的前面；</p>
+<pre><code>不稳定</code></pre><p>：如果a原本在b的前面，而a=b，排序之后a可能会出现在b的后面；</p>
+<pre><code>内排序</code></pre><p>：所有排序操作都在内存中完成；</p>
+<pre><code>外排序</code></pre><p>：由于数据太大，因此把数据放在磁盘中，而排序通过磁盘和内存的数据传输才能进行；</p>
+<pre><code>时间复杂度</code></pre><p>： 一个算法执行所耗费的时间。</p>
+<pre><code>空间复杂度</code></pre><p>：运行完一个程序所需内存的大小。</p>
+<pre><code>0.3</code></pre><p>算法总结</p>
+<pre><code>图片名词解释：
+
+n:</code></pre><p>数据规模</p>
+<pre><code>k:</code></pre><p>“桶”的个数</p>
+<pre><code>In-place:</code></pre><p>占用常数内存，不占用额外内存</p>
+<pre><code>Out-place:</code></pre><p>占用额外内存</p>
+<pre><code>0.5</code></pre><p>算法分类</p>
+<pre><code>0.6</code></pre><p>比较和非比较的区别</p>
+<pre><code>常见的快速排序、归并排序、堆排序、冒泡排序 等属于比较排序 。在排序的最终结果里，元素之间的次序依赖于它们之间的比较。每个数都必须和其他数进行比较，才能确定自己的位置</code></pre><p>。</p>
+<pre><code>在冒泡排序之类的排序中，问题规模为n，又因为需要比较n次，所以平均时间复杂度为O(n²)。在归并排序、快速排序之类的排序中，问题规模通过分治法消减为logN次，所以时间复杂度平均O(nlogn)。
+
+比较排序的优势是，适用于各种规模的数据，也不在乎数据的分布，都能进行排序。可以说，比较排序适用于一切需要排序的情况。
+
+计数排序、基数排序、桶排序则属于非比较排序 。非比较排序是通过确定每个元素之前，应该有多少个元素来排序。针对数组arr，计算arr[i]之前有多少个元素，则唯一确定了arr[i]在排序后数组中的位置 。
+
+非比较排序只要确定每个元素之前的已有的元素个数即可，所有一次遍历即可解决。算法时间复杂度O(n)。
+
+非比较排序时间复杂度底，但由于非比较排序需要占用空间来确定唯一位置。所以对数据规模和数据分布有一定的要求。</code></pre><p>1、冒泡排序（Bubble Sort）</p>
+<pre><code>冒泡排序</code></pre><p>是一种简单的排序算法。它重复地走访过要排序的数列，一次比较两个元素，如果它们的顺序错误就把它们交换过来。走访数列的工作是重复地进行直到没有再需要交换，也就是说该数列已经排序完成。这个算法的名字由来是因为越小的元素会经由交换慢慢“浮”到数列的顶端。</p>
+<p>  1.3<br>代码实现</p>
+<p>1.1 算法描述</p>
+<pre><code>步骤1: 比较相邻的元素。如果第一个比第二个大，就交换它们两个；
+
+       步骤2: 对每一对相邻元素作同样的工作，从开始第一对到结尾的最后一对，这样在最后的元素应该会是最大的数；
+
+       步骤3: 针对所有的元素重复以上的步骤，除了最后一个；
+
+       步骤4: 重复步骤1~3，直到排序完成。
+
+
+
+1.2</code></pre><p>动图演示</p>
+<p>/**    </p>
+<ul>
+<li>冒泡排序    </li>
+<li><ul>
+<li>@param array     * @return     */<br>public static int[] bubbleSort(int[] array) {        if (array.length == 0)            return array;        for (int i = 0; i &lt; array.length;<br>i++)            for (int j = 0; j &lt;<br>array.length - 1 - i; j++)<br>if (array[j + 1] &lt; array[j]) {                    int temp = array[j +<br>1];                    array[j + 1] = array[j];                    array[j] = temp;                }        return array;    }</li>
+</ul>
+</li>
+</ul>
+<p>1.4 算法分析</p>
+<pre><code>最佳情况：T(n) = O(n)
+
+       最差情况：T(n) = O(n2)
+
+       平均情况：T(n) = O(n2)</code></pre><p>2、选择排序（Selection<br>Sort）</p>
+<pre><code>选择排序</code></pre><p>是表现最稳定的排序算法之一 ，因为无论什么数据进去都是O(n2)的时间复杂度 ，所以用到它的时候，数据规模越小越好。唯一的好处可能就是不占用额外的内存空间了吧。理论上讲，选择排序可能也是平时排序一般人想到的最多的排序方法了吧。</p>
+<pre><code>选择排序(Selection-sort) 是一种简单直观的排序算法。它的工作原理：首先在未排序序列中找到最小（大）元素，存放到排序序列的起始位置，然后，再从剩余未排序元素中继续寻找最小（大）元素，然后放到已排序序列的末尾。以此类推，直到所有元素均排序完毕。</code></pre><p>2.3 代码实现 </p>
+<p>2.1 算法描述</p>
+<pre><code>    n个记录的直接选择排序可经过n-1趟直接选择排序得到有序结果。具体算法描述如下：
+
+步骤1：初始状态：无序区为R[1…n]，有序区为空；
+
+       步骤2：第i趟排序(i=1,2,3…n-1)开始时，当前有序区和无序区分别为R[1…i-1]和R(i…n）。该趟排序从当前无序区中-选出关键字最小的记录 R[k]，将它与无序区的第1个记录R交换，使R[1…i]和R[i+1…n)分别变为记录个数增加1个的新有序区和记录个数减少1个的新无序区；
+
+       步骤3：n-1趟结束，数组有序化了。
+
+
+
+2.2</code></pre><p>动图演示</p>
+<pre><code>/**    </code></pre><ul>
+<li>选择排序    </li>
+<li>@param array     * @return     */<br>public static int[] selectionSort(int[] array) {        if (array.length == 0)            return array;        for (int i = 0; i &lt; array.length; i++)<br>{            int minIndex = i;            for (int j = i; j &lt;<br>array.length; j++) {                if<br>(array[j] &lt; array[minIndex]) //找到最小的数                    minIndex = j; //将最小数的索引保存            }            int temp = array[minIndex];            array[minIndex] = array[i];            array[i] = temp;        }<br>return array;    }</li>
+</ul>
+<pre><code>2.4</code></pre><p>算法分析</p>
+<pre><code>最佳情况：T(n) = O(n2)
+
+最差情况：T(n) = O(n2)
+
+平均情况：T(n) = O(n2)</code></pre><p>3、插入排序（Insertion<br>Sort）</p>
+<pre><code>插入排序（Insertion-Sort） 的算法描述是一种简单直观的排序算法。它的工作原理是通过构建有序序列，对于未排序数据，在已排序序列中从后向前扫描，找到相应位置并插入。插入排序在实现上，通常采用in-place排序（即只需用到O(1)的额外空间的排序），因而在从后向前扫描过程中，需要反复把已排序元素逐步向后挪位，为最新元素提供插入空间。</code></pre><p>3.1 算法描述</p>
+<pre><code>一般来说，插入排序都采用in-place在数组上实现。具体算法描述如下：
+
+步骤1: 从第一个元素开始，该元素可以认为已经被排序；
+
+       步骤2: 取出下一个元素，在已经排序的元素序列中从后向前扫描；
+
+       步骤3: 如果该元素（已排序）大于新元素，将该元素移到下一位置；
+
+       步骤4: 重复步骤3，直到找到已排序的元素小于或者等于新元素的位置；
+
+       步骤5: 将新元素插入到该位置后；
+
+       步骤6: 重复步骤2~5。
+
+
+
+3.2</code></pre><p>动图演示</p>
+<pre><code>3.3</code></pre><p>代码实现</p>
+<pre><code>/**    </code></pre><ul>
+<li>插入排序    </li>
+<li>@param array     * @return     */<br>public static int[] insertionSort(int[] array) {        if (array.length == 0)            return array;        int current;        for (int i = 0; i &lt; array.length -<br>1; i++) {            current = array[i +<br>1];            int preIndex = i;            while (preIndex &gt;= 0 &amp;&amp;<br>current &lt; array[preIndex]) {<br>array[preIndex + 1] = array[preIndex];                preIndex–;            }            array[preIndex + 1] = current;        }<br>return array;    }</li>
+</ul>
+<pre><code>3.4</code></pre><p>算法分析</p>
+<pre><code>最佳情况：T(n) = O(n)
+
+最坏情况：T(n) = O(n2)
+
+平均情况：T(n) = O(n2)</code></pre><p>4、希尔排序（Shell Sort）</p>
+<pre><code>希尔排序是希尔（Donald Shell） 于1959年提出的一种排序算法。希尔排序也是一种插入排序，它是简单插入排序经过改进之后的一个更高效的版本，也称为缩小增量排序，同时该算法是冲破O(n2）的第一批算法之一。它与插入排序的不同之处在于，它会优先比较距离较远的元素。希尔排序又叫缩小增量排序。
+
+
+
+希尔排序是把记录按下表的一定增量分组，对每组使用直接插入排序算法排序；随着增量逐渐减少，每组包含的关键词越来越多，当增量减至1时，整个文件恰被分成一组，算法便终止。</code></pre><p>4.1 算法描述</p>
+<pre><code>    我们来看下希尔排序的基本步骤，在此我们选择增量gap=length/2，缩小增量继续以gap = gap/2的方式，这种增量选择我们可以用一个序列来表示，{n/2,(n/2)/2…1}，称为增量序列。希尔排序的增量序列的选择与证明是个数学难题，我们选择的这个增量序列是比较常用的，也是希尔建议的增量，称为希尔增量，但其实这个增量序列不是最优的。此处我们做示例使用希尔增量。
+
+    先将整个待排序的记录序列分割成为若干子序列分别进行直接插入排序，具体算法描述：
+
+步骤1：选择一个增量序列t1，t2，…，tk，其中ti&gt;tj，tk=1；
+
+       步骤2：按增量序列个数k，对序列进行k 趟排序；
+
+       步骤3：每趟排序，根据对应的增量ti，将待排序列分割成若干长度为m 的子序列，分别对各子表进行直接插入排序。仅增量因子为1 时，整个序列作为一个表来处理，表长度即为整个序列的长度。
+
+
+
+4.2</code></pre><p>过程演示</p>
+<p>4.3 代码实现</p>
+<pre><code>/**     * 希尔排序     *    </code></pre><ul>
+<li>@param array     * @return     */<br>public static int[] ShellSort(int[] array) {        int len = array.length;        int temp, gap = len / 2;        while (gap &gt; 0) {            for (int i = gap; i &lt; len; i++)<br>{                temp = array[i];                int preIndex = i - gap;                while (preIndex &gt;= 0<br>&amp;&amp; array[preIndex] &gt; temp) {                    array[preIndex + gap] =<br>array[preIndex];<br>preIndex -= gap;<br>}                array[preIndex +<br>gap] = temp;            }            gap /= 2;        }<br>return array;    }</li>
+</ul>
+<pre><code>4.4</code></pre><p>算法分析</p>
+<pre><code>最佳情况：T(n) = O(nlog2 n)
+
+最坏情况：T(n) = O(nlog2 n)
+
+平均情况：T(n) =O(nlog2n)</code></pre><p>5、归并排序（Merge Sort）</p>
+<pre><code>和选择排序一样，归并排序的性能不受输入数据的影响，但表现比选择排序好的多，因为始终都是O(n log n）的时间复杂度。代价是需要额外的内存空间。
+
+归并排序</code></pre><p>是建立在归并操作上的一种有效的排序算法。该算法是采用分治法（Divide and Conquer）的一个非常典型的应用。归并排序是一种稳定的排序方法。将已有序的子序列合并，得到完全有序的序列；即先使每个子序列有序，再使子序列段间有序。若将两个有序表合并成一个有序表，称为2-路归并。</p>
+<p>5.1 算法描述</p>
+<pre><code>步骤1：把长度为n的输入序列分成两个长度为n/2的子序列；
+
+       步骤2：对这两个子序列分别采用归并排序；
+
+       步骤3：将两个排序好的子序列合并成一个最终的排序序列。
+
+
+
+5.2</code></pre><p>动图演示</p>
+<p>5.3 代码实现</p>
+<p>/**    </p>
+<ul>
+<li>归并排序    </li>
+<li><ul>
+<li>@param array     * @return     <em>/<br>public static int[] MergeSort(int[] array) {        if (array.length &lt; 2) return<br>array;        int mid = array.length /<br>2;        int[] left = Arrays.copyOfRange(array,<br>0, mid);        int[] right = Arrays.copyOfRange(array, mid,<br>array.length);        return<br>merge(MergeSort(left), MergeSort(right));<br>}    /*</em>     * 归并排序——将两段排序好的数组结合成一个排序数组     *     * @param left     * @param right     * @return     */<br>public static int[] merge(int[] left, int[] right) {        int[] result = new int[left.length +<br>right.length];        for (int index = 0,<br>i = 0, j = 0; index &lt; result.length; index++) {            if (i &gt;= left.length)                result[index] =<br>right[j++];            else if (j &gt;=<br>right.length)<br>result[index] = left[i++];<br>else if (left[i] &gt; right[j])                result[index] = right[j++];            else                result[index] = left[i++];        }<br>return result;    }</li>
+</ul>
+</li>
+</ul>
+<p>5.4 算法分析</p>
+<p>最佳情况：T(n) = O(n)</p>
+<pre><code>最差情况：T(n) = O(nlogn)
+
+平均情况：T(n) = O(nlogn)</code></pre><p>6、快速排序（Quick Sort）</p>
+<pre><code>快速排序</code></pre><p>的基本思想：通过一趟排序将待排记录分隔成独立的两部分，其中一部分记录的关键字均比另一部分的关键字小，则可分别对这两部分记录继续进行排序，以达到整个序列有序。</p>
+<p>6.1 算法描述</p>
+<pre><code>快速排序使用分治法来把一个串（list）分为两个子串（sub-lists）。具体算法描述如下：
+
+步骤1：从数列中挑出一个元素，称为 “基准”（pivot ）；
+
+       步骤2：重新排序数列，所有元素比基准值小的摆放在基准前面，所有元素比基准值大的摆在基准的后面（相同的数可以到任一边）。在这个分区退出之后，该基准就处于数列的中间位置。这个称为分区（partition）操作；
+
+       步骤3：递归地（recursive）把小于基准值元素的子数列和大于基准值元素的子数列排序。
+
+
+
+6.2</code></pre><p>动图演示</p>
+<p>6.3 代码实现</p>
+<p>/**    </p>
+<ul>
+<li>快速排序方法    </li>
+<li>@param array     * @param<br>start     * @param end     * @return     <em>/<br>public static int[] QuickSort(int[] array, int start, int end) {        if (array.length &lt; 1 || start &lt; 0<br>|| end &gt;= array.length || start &gt; end) return null;        int smallIndex = partition(array,<br>start, end);        if (smallIndex &gt;<br>start)            QuickSort(array, start,<br>smallIndex - 1);        if (smallIndex<br>&lt; end)            QuickSort(array,<br>smallIndex + 1, end);        return<br>array;    }    /*</em>    </li>
+<li>快速排序算法——partition     * @param array     * @param start     * @param end     * @return     <em>/<br>public static int partition(int[] array, int start, int end) {        int pivot = (int) (start +<br>Math.random() * (end - start + 1));<br>int smallIndex = start - 1;<br>swap(array, pivot, end);<br>for (int i = start; i &lt;= end; i++)            if (array[i] &lt;= array[end])<br>{                smallIndex++;                if (i &gt; smallIndex)                    swap(array, i,<br>smallIndex);            }        return smallIndex;    }<br>/*</em>     * 交换数组内两个元素     * @param array     * @param i     * @param j     */<br>public static void swap(int[] array, int i, int j) {        int temp = array[i];        array[i] = array[j];        array[j] = temp;    }</li>
+</ul>
+<p>6.4 算法分析</p>
+<p>最佳情况：T(n) = O(nlogn)</p>
+<pre><code>最差情况：T(n) = O(n2)
+
+平均情况：T(n) = O(nlogn)</code></pre><p>7、堆排序（Heap Sort）</p>
+<pre><code>堆排序（Heapsort） 是指利用堆这种数据结构所设计的一种排序算法。堆积是一个近似完全二叉树的结构，并同时满足堆积的性质：即子结点的键值或索引总是小于（或者大于）它的父节点。</code></pre><p>7.1 算法描述</p>
+<pre><code>步骤1：将初始待排序关键字序列(R1,R2….Rn)构建成大顶堆，此堆为初始的无序区；
+
+       步骤2：将堆顶元素R[1]与最后一个元素R[n]交换，此时得到新的无序区(R1,R2,……Rn-1)和新的有序区(Rn),且满足R[1,2…n-1]&lt;=R[n]；
+
+       步骤3：由于交换后新的堆顶R[1]可能违反堆的性质，因此需要对当前无序区(R1,R2,……Rn-1)调整为新堆，然后再次将R[1]与无序区最后一个元素交换，得到新的无序区(R1,R2….Rn-2)和新的有序区(Rn-1,Rn)。不断重复此过程直到有序区的元素个数为n-1，则整个排序过程完成。
+
+
+
+7.2</code></pre><p>动图演示</p>
+<pre><code>7.3</code></pre><p>代码实现</p>
+<pre><code>注意：这里用到了完全二叉树的部分性质：详情见数据结构二叉树知识点</code></pre><p>//声明全局变量，用于记录数组array的长度；    static int len;    /**    </p>
+<ul>
+<li>堆排序算法    </li>
+<li><ul>
+<li>@param array     * @return     <em>/<br>public static int[] HeapSort(int[] array) {        len = array.length;        if (len &lt; 1) return array;        //1.构建一个最大堆        buildMaxHeap(array);        //2.循环将堆首位（最大值）与末位交换，然后在重新调整最大堆        while (len &gt; 0)<br>{            swap(array, 0, len -<br>1);            len–;            adjustHeap(array, 0);        }<br>return array;    }    /*</em>    </li>
+</ul>
+</li>
+<li>建立最大堆    </li>
+<li><ul>
+<li>@param array     <em>/<br>public static void buildMaxHeap(int[] array) {        //从最后一个非叶子节点开始向上构造最大堆        //for循环这样写会更好一点：i的左子树和右子树分别2i+1和2(i+1)        for (int i = (len/2- 1); i &gt;= 0;<br>i–) {            adjustHeap(array,<br>i);        }    }<br>/*</em>     * 调整使之成为最大堆     *     * @param array     * @param i     <em>/<br>public static void adjustHeap(int[] array, int i) {        int maxIndex = i;        //如果有左子树，且左子树大于父节点，则将最大指针指向左子树        if (i * 2 &lt; len<br>&amp;&amp; array[i * 2] &gt; array[maxIndex])            maxIndex = i * 2;   //感谢网友矫正，之前是i</em>2+1        //如果有右子树，且右子树大于父节点，则将最大指针指向右子树        if (i * 2 + 1 &lt; len<br>&amp;&amp; array[i * 2 + 1] &gt; array[maxIndex])            maxIndex = i * 2 + 1;   //感谢网友矫正，之前是i*2+2        //如果父节点不是最大值，则将父节点与最大值交换，并且递归调整与父节点交换的位置。        if (maxIndex != i)<br>{            swap(array, maxIndex,<br>i);            adjustHeap(array,<br>maxIndex);        }    }</li>
+</ul>
+</li>
+</ul>
+<p>7.4 算法分析</p>
+<p>最佳情况：T(n) = O(nlogn)</p>
+<pre><code>最差情况：T(n) = O(nlogn)
+
+平均情况：T(n) = O(nlogn)</code></pre><p>8、计数排序（Counting<br>Sort）</p>
+<pre><code>计数排序</code></pre><p>的核心在于将输入的数据值转化为键存储在额外开辟的数组空间中。 作为一种线性时间复杂度的排序，计数排序要求输入的数据必须是有确定范围的整数。</p>
+<pre><code>计数排序(Counting sort) 是一种稳定的排序算法。计数排序使用一个额外的数组C，其中第i个元素是待排序数组A中值等于i的元素的个数。然后根据数组C来将A中的元素排到正确的位置。它只能对整数进行排序。</code></pre><p>8.1 算法描述</p>
+<pre><code>步骤1：找出待排序的数组中最大和最小的元素；
+
+       步骤2：统计数组中每个值为i的元素出现的次数，存入数组C的第i项；
+
+       步骤3：对所有的计数累加（从C中的第一个元素开始，每一项和前一项相加）；
+
+       步骤4：反向填充目标数组：将每个元素i放在新数组的第C(i)项，每放一个元素就将C(i)减去1。
+
+
+
+8.2</code></pre><p>动图演示</p>
+<p>8.3 代码实现</p>
+<p>/**     * 计数排序     *     * @param array     * @return     */<br>public static int[] CountingSort(int[] array) {        if (array.length == 0) return<br>array;        int bias, min = array[0],<br>max = array[0];        for (int i = 1; i<br>&lt; array.length; i++) {            if<br>(array[i] &gt; max)                max =<br>array[i];            if (array[i] &lt;<br>min)                min = array[i];        }<br>bias = 0 - min;        int[]<br>bucket = new int[max - min + 1];<br>Arrays.fill(bucket, 0);        for (int i = 0; i &lt; array.length; i++)<br>{            bucket[array[i] +<br>bias]++;        }        int index = 0, i = 0;        while (index &lt; array.length) {            if (bucket[i] != 0) {                array[index] = i - bias;                bucket[i]–;                index++;            } else                i++;        }<br>return array;    }</p>
+<p>8.4 算法分析</p>
+<pre><code>当输入的元素是n 个0到k之间的整数时，它的运行时间是 O(n + k)。计数排序不是比较排序，排序的速度快于任何比较排序算法。由于用来计数的数组C的长度取决于待排序数组中数据的范围（等于待排序数组的最大值与最小值的差加上1），这使得计数排序对于数据范围很大的数组，需要大量时间和内存。</code></pre><p>最佳情况：T(n) = O(n+k)</p>
+<pre><code>最差情况：T(n) = O(n+k)
+
+平均情况：T(n) = O(n+k)</code></pre><p>9、桶排序（Bucket Sort）</p>
+<pre><code>桶排序</code></pre><p>是计数排序的升级版。它利用了函数的映射关系，高效与否的关键就在于这个映射函数的确定。</p>
+<pre><code>桶排序 (Bucket sort)的工作的原理：</code></pre><p>假设输入数据服从均匀分布，将数据分到有限数量的桶里，每个桶再分别排序（有可能再使用别的排序算法或是以递归方式继续使用桶排序进行排</p>
+<p>9.1 算法描述</p>
+<pre><code>步骤1：人为设置一个BucketSize，作为每个桶所能放置多少个不同数值（例如当BucketSize==5时，该桶可以存放｛1,2,3,4,5｝这几种数字，但是容量不限，即可以存放100个3）；
+
+       步骤2：遍历输入数据，并且把数据一个一个放到对应的桶里去；
+
+       步骤3：对每个不是空的桶进行排序，可以使用其它排序方法，也可以递归使用桶排序；
+
+       步骤4：从不是空的桶里把排好序的数据拼接起来。 
+
+       注意，如果递归使用桶排序为各个桶排序，则当桶数量为1时要手动减小BucketSize增加下一循环桶的数量，否则会陷入死循环，导致内存溢出。
+
+
+
+9.2</code></pre><p>图片演示</p>
+<pre><code>9.3</code></pre><p>代码实现</p>
+<p> /**    </p>
+<ul>
+<li>桶排序    </li>
+<li><ul>
+<li>@param array     * @param bucketSize     * @return     */<br>public static ArrayList<Integer><br>BucketSort(ArrayList<Integer> array, int bucketSize) {        if (array == null || array.size() &lt;<br>2)            return array;        int max = array.get(0), min =<br>array.get(0);        // 找到最大值最小值        for (int i = 0; i &lt;<br>array.size(); i++) {            if<br>(array.get(i) &gt; max)<br>max = array.get(i);            if<br>(array.get(i) &lt; min)                min = array.get(i);        }<br>int bucketCount = (max - min) / bucketSize + 1;<br>ArrayList&lt;ArrayList<Integer>&gt; bucketArr = new<br>ArrayList&lt;&gt;(bucketCount);<br>ArrayList<Integer> resultArr = new ArrayList&lt;&gt;();        for (int i = 0; i &lt; bucketCount;<br>i++) {            bucketArr.add(new<br>ArrayList<Integer>());<br>}        for (int i = 0; i &lt;<br>array.size(); i++) {<br>bucketArr.get((array.get(i) - min) / bucketSize).add(array.get(i));        }<br>for (int i = 0; i &lt; bucketCount; i++) {            if (bucketSize == 1) { // 如果带排序数组中有重复数字时                for (int j =<br>0; j &lt; bucketArr.get(i).size(); j++)<br>resultArr.add(bucketArr.get(i).get(j));            } else {                if (bucketCount == 1)                    bucketSize–;                ArrayList<Integer> temp =<br>BucketSort(bucketArr.get(i), bucketSize);                for (int j = 0; j &lt;<br>temp.size(); j++)<br>resultArr.add(temp.get(j));<br>}        }        return resultArr;    }</li>
+</ul>
+</li>
+</ul>
+<p>9.4 算法分析</p>
+<pre><code>桶排序最好情况下使用线性时间O(n)，桶排序的时间复杂度，取决与对各个桶之间数据进行排序的时间复杂度，因为其它部分的时间复杂度都为O(n)。很显然，桶划分的越小，各个桶之间的数据越少，排序所用的时间也会越少。但相应的空间消耗就会增大。</code></pre><p>最佳情况：T(n) = O(n+k)</p>
+<pre><code>最差情况：T(n) = O(n+k)
+
+平均情况：T(n) = O(n2)</code></pre><p>10、基数排序（Radix Sort）</p>
+<pre><code>基数排序也是非比较的排序算法，对每一位进行排序，从最低位开始排序，复杂度为O(kn),为数组长度，k为数组中的数的最大的位数；
+
+
+
+基数排序是按照低位先排序，然后收集；再按照高位排序，然后再收集；依次类推，直到最高位。有时候有些属性是有优先级顺序的，先按低优先级排序，再按高优先级排序。最后的次序就是高优先级高的在前，高优先级相同的低优先级高的在前。基数排序基于分别排序，分别收集，所以是稳定的。</code></pre><p>10.1 算法描述</p>
+<pre><code>步骤1：取得数组中的最大数，并取得位数；
+
+       步骤2：arr为原始数组，从最低位开始取每个位组成radix数组；
+
+       步骤3：对radix进行计数排序（利用计数排序适用于小范围数的特点）；
+
+
+
+10.2</code></pre><p>动图演示</p>
+<pre><code>10.3</code></pre><p>代码实现</p>
+<p> /**    </p>
+<ul>
+<li>基数排序    </li>
+<li>@param array     * @return     */<br>public static int[] RadixSort(int[] array) {        if (array == null || array.length &lt;<br>2)            return array;        // 1.先算出最大数的位数；        int max = array[0];        for (int i = 1; i &lt; array.length;<br>i++) {            max = Math.max(max,<br>array[i]);        }        int maxDigit = 0;        while (max != 0) {            max /= 10;            maxDigit++;        }<br>   int mod = 10, div = 1;<br>ArrayList&lt;ArrayList<Integer>&gt; bucketList = new<br>ArrayList&lt;ArrayList<Integer>&gt;();        for (int i = 0; i &lt; 10; i++)            bucketList.add(new<br>ArrayList<Integer>());        for<br>(int i = 0; i &lt; maxDigit; i++, mod *= 10, div *= 10) {            for (int j = 0; j &lt;<br>array.length; j++) {                int<br>num = (array[j] % mod) / div;<br>bucketList.get(num).add(array[j]);            }            int index = 0;            for (int j = 0; j &lt;<br>bucketList.size(); j++) {<br>for (int k = 0; k &lt; bucketList.get(j).size(); k++)                    array[index++] =<br>bucketList.get(j).get(k);<br>bucketList.get(j).clear();<br>}        }        return array;    }</li>
+</ul>
+<pre><code>10.4</code></pre><p>算法分析</p>
+<pre><code>最佳情况：T(n) = O(n * k)
+
+       最差情况：T(n) = O(n * k)
+
+       平均情况：T(n) = O(n * k)
+
+
+
+
+
+10.5</code></pre><p>基数排序有两种方法：</p>
+<pre><code>MSD</code></pre><p>从高位开始进行排序</p>
+<pre><code>LSD</code></pre><p>从低位开始进行排序</p>
+<pre><code>基数排序 vs 计数排序 vs 桶排序
+
+这三种排序算法都利用了桶的概念，但对桶的使用方法上有明显差异：
+
+
+
+基数排序：</code></pre><p>根据键值的每位数字来分配桶</p>
+<pre><code>计数排序：</code></pre><p>每个桶只存储单一键值</p>
+<pre><code>桶排序：</code></pre><p>每个桶存储一定范围的数值</p>
+]]></content>
+      <categories>
+        <category>算法</category>
+        <category>排序算法</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+</search>
